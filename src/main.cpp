@@ -287,6 +287,7 @@ int main(int argCount, char **argList)
 	bool straightConvert = false;
 	bool inputNext = false;
 	bool outputNext = false;
+	bool noMatNames = false;
 
 	if (argCount == 1)
 	{
@@ -307,6 +308,7 @@ int main(int argCount, char **argList)
 				if (strcmp(argList[i], "-s") == 0) straightConvert = true;
 				else if (strcmp(argList[i], "-i") == 0) inputNext = true;
 				else if (strcmp(argList[i], "-o") == 0) outputNext = true;
+				else if (strcmp(argList[i], "-m") == 0) noMatNames = true;
 				else if (!inputFile) inputFile = argList[i];
 				else if (!outputFile) outputFile = argList[i];
 			}
@@ -332,7 +334,8 @@ int main(int argCount, char **argList)
 		std::cout << "Usage:" << std::endl;
 		std::cout << "\t-i:\tInput File" << std::endl;
 		std::cout << "\t-o:\tOutput File" << std::endl;
-		std::cout << "\t-s:\tStraight Conversion [do not separate position, normal, and texcoord into their own arrays]" << std::endl << std::endl;
+		std::cout << "\t-m:\tDo Not Preserve Material Names" << std::endl;
+		std::cout << "\t-s:\tAll Vertex Elements in Single Array" << std::endl << std::endl;
 		return 0;
 	}
 
@@ -458,9 +461,11 @@ int main(int argCount, char **argList)
 		int GroupCount;
 		int MaterialCount;
 		int TextureCount;
-		int VertexComponents;
+		int VertexComponents : 1;
+		int MaterialNames : 1;
 	};
 	cmesh_header header;
+	ZeroMemory(&header, sizeof(cmesh_header));
 	header.Header[0] = '_';
 	header.Header[1] = 'C';
 	header.Header[2] = 'M';
@@ -473,6 +478,7 @@ int main(int argCount, char **argList)
 	header.MaterialCount = oMesh->MaterialCount;
 	header.TextureCount = oMesh->TextureCount;
 	header.VertexComponents = straightConvert ? 0 : 1;
+	header.MaterialNames = noMatNames ? 0 : 1;
 
 	std::cout << "#Groups:\t" << header.GroupCount << std::endl;
 	std::cout << "#Materials:\t" << header.MaterialCount << std::endl;
@@ -548,7 +554,21 @@ int main(int argCount, char **argList)
 		for (int i = 0; i < oMesh->MaterialCount; i++)
 		{
 			ExMaterial *current = oMesh->MaterialList[i];
-			oMeshFile.write((char *)current, sizeof(ExMaterial));
+
+			// Preserve material names.
+			if (header.MaterialNames)
+			{
+				int length = strlen(current->Name) + 1;
+				oMeshFile.write((char *)&length, 4);
+				oMeshFile.write((char *)current->Name, length);
+			}
+
+			// Write the rest of the file.
+			oMeshFile.write((char *)current->Diffuse, 16);
+			oMeshFile.write((char *)current->Ambient, 12);
+			oMeshFile.write((char *)current->Specular, 12);
+			oMeshFile.write((char *)current->Emissive, 12);
+			oMeshFile.write((char *)&current->Power, 4);
 		}
 	}
 
