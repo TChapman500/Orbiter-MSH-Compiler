@@ -152,8 +152,12 @@ public:
 
 	inline char *GetTextureName(DWORD texidx)
 	{
-		if (texidx < nTex) return TexFiles[texidx].File;
-		else return nullptr;
+		if (texidx < nTex)
+		{
+			if (TexFiles[texidx].File[0] == '\0') return nullptr;
+			return TexFiles[texidx].File;
+		}
+		return nullptr;
 	}
 
 	void SetTexMixture (DWORD grp, DWORD ntex, float mix);
@@ -200,6 +204,7 @@ public:
 		char File[256];
 	};
 	tex_file *Labels;
+	tex_file *MatNames;
 private:
 
 	DWORD nGrp;         // number of groups

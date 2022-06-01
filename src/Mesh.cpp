@@ -746,10 +746,19 @@ istream &operator>> (istream &is, Mesh &mesh)
 	// read material list
 	if (is.getline (cbuf, 256) && !strncmp (cbuf, "MATERIALS", 9) && (sscanf (cbuf+9, "%d", &nmtrl) == 1)) {
 		Str256 *matname = new Str256[nmtrl];
+		mesh.MatNames = new Mesh::tex_file[nmtrl];
 		Str256 mnm;
 		for (i = 0; i < nmtrl; i++) {
+			Str256 *curr = &matname[i];
 			is.getline (cbuf, 256);
 			sscanf (cbuf, "%s", matname[i]);
+			ZeroMemory(&mesh.MatNames[i], 256);
+			int len = strlen(matname[i]);
+			for (int c = 0; c < 255; c++)
+			{
+				mesh.MatNames[i].File[c] = cbuf[c];
+			}
+
 		}
 		for (i = 0; i < nmtrl; i++) {
 			ZeroMemory (&mtrl, sizeof (D3DMATERIAL7));
@@ -772,6 +781,7 @@ istream &operator>> (istream &is, Mesh &mesh)
 	// read texture list
 	if (is.getline (cbuf, 256) && !strncmp (cbuf, "TEXTURES", 8) && (sscanf (cbuf+8, "%d", &ntex) == 1)) {
 		Str256 texname, flagstr;
+		mesh.nTex = ntex;
 		mesh.TexFiles = new Mesh::tex_file[ntex];
 		for (i = 0; i < ntex; i++) {
 			is.getline (cbuf, 256);
@@ -780,7 +790,9 @@ istream &operator>> (istream &is, Mesh &mesh)
 			if (texname[0] != '0' || texname[1] != '\0') {
 				bool uncompress = (toupper(flagstr[0]) == 'D');
 			}
-			for (int t = 0; t < 256; t++) mesh.TexFiles[i].File[t] = texname[t];
+			ZeroMemory(&mesh.TexFiles[i], 256);
+			int length = strlen(texname);
+			for (int t = 0; t < length; t++) mesh.TexFiles[i].File[t] = texname[t];
 		}
 	}
 

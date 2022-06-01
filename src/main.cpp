@@ -130,17 +130,24 @@ public:
 class ExMaterial
 {
 public:
+	char Name[256];
 	float Diffuse[4];
 	float Ambient[3];
 	float Specular[3];
 	float Emissive[3];
 	float Power;
 
-	ExMaterial(D3DMATERIAL7 *material)
+	ExMaterial(D3DMATERIAL7 *material, char *name)
 	{
 		ZeroMemory(this, sizeof(ExMaterial));
 
 		if (!material) return;
+
+		if (name)
+		{
+			int length = strlen(name);
+			for (int i = 0; i < length; i++) Name[i] = name[i];
+		}
 
 		Diffuse[0] = material->diffuse.r;
 		Diffuse[1] = material->diffuse.g;
@@ -213,22 +220,6 @@ public:
 					char *label = mesh->Labels[i].File;
 					if (mesh->Labels[i].File[0] == '\0') label = nullptr;
 					GroupList[i] = new(std::nothrow) ExMeshGroup(mesh->GetGroup(i), label);
-					if (!GroupList[i])
-					{
-						failed = true;
-						break;
-					}
-				}
-				if (failed)
-				{
-					failed = false;
-					for (int i = 0; i < GroupCount; i++)
-					{
-						if (GroupList[i]) delete GroupList[i];
-						else break;
-					}
-					delete[] GroupList;
-					GroupList = nullptr;
 				}
 			}
 		}
@@ -242,23 +233,9 @@ public:
 			{
 				for (int i = 0; i < MaterialCount; i++)
 				{
-					MaterialList[i] = new(std::nothrow) ExMaterial(mesh->GetMaterial(i));
-					if (!MaterialList[i])
-					{
-						failed = true;
-						break;
-					}
-				}
-				if (failed)
-				{
-					failed = false;
-					for (int i = 0; i < MaterialCount; i++)
-					{
-						if (MaterialList[i]) delete MaterialList[i];
-						else break;
-					}
-					delete[] MaterialList;
-					MaterialList = nullptr;
+					char *name = mesh->MatNames[i].File;
+					if (name[0] == '\0') name = nullptr;
+					MaterialList[i] = new(std::nothrow) ExMaterial(mesh->GetMaterial(i), name);
 				}
 			}
 		}
@@ -273,22 +250,6 @@ public:
 				for (int i = 0; i < TextureCount; i++)
 				{
 					TextureList[i] = new(std::nothrow) ExTexture(mesh->GetTextureName(i));
-					if (!TextureList[i])
-					{
-						failed = true;
-						break;
-					}
-				}
-				if (failed)
-				{
-					failed = false;
-					for (int i = 0; i < TextureCount; i++)
-					{
-						if (TextureList[i]) delete TextureList[i];
-						else break;
-					}
-					delete[] TextureList;
-					TextureList = nullptr;
 				}
 			}
 		}
@@ -327,30 +288,43 @@ int main(int argCount, char **argList)
 	bool inputNext = false;
 	bool outputNext = false;
 
-	for (int i = 1; i < argCount; i++)
+	if (argCount == 1)
 	{
-		if (!inputNext && !outputNext)
+		char buffer[256];
+		ZeroMemory(buffer, 256);
+		std::cout << "Input File> ";
+		std::cin >> buffer;
+		int length = strlen(buffer) + 1;
+		inputFile = new char[length];
+		for (int i = 0; i < length; i++) inputFile[i] = buffer[i];
+	}
+	else
+	{
+		for (int i = 1; i < argCount; i++)
 		{
-			if (strcmp(argList[i], "-s") == 0) straightConvert = true;
-			else if (strcmp(argList[i], "-i") == 0) inputNext = true;
-			else if (strcmp(argList[i], "-o") == 0) outputNext = true;
-			else if (!inputFile) inputFile = argList[i];
-			else if (!outputFile) outputFile = argList[i];
-		}
-		else
-		{
-			if (inputNext)
+			if (!inputNext && !outputNext)
 			{
-				inputNext = false;
-				inputFile = argList[i];
+				if (strcmp(argList[i], "-s") == 0) straightConvert = true;
+				else if (strcmp(argList[i], "-i") == 0) inputNext = true;
+				else if (strcmp(argList[i], "-o") == 0) outputNext = true;
+				else if (!inputFile) inputFile = argList[i];
+				else if (!outputFile) outputFile = argList[i];
 			}
-			else if (outputNext)
+			else
 			{
-				outputNext = false;
-				outputFile = argList[i];
+				if (inputNext)
+				{
+					inputNext = false;
+					inputFile = argList[i];
+				}
+				else if (outputNext)
+				{
+					outputNext = false;
+					outputFile = argList[i];
+				}
 			}
-		}
 
+		}
 	}
 
 	if (!inputFile)
