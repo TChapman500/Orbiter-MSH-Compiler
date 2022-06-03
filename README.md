@@ -10,6 +10,7 @@ The purpose of this program is to compile [Orbiter](https://github.com/orbitersi
 | `-i`      | Optional parameter to specify input file.  If used, the next parameter must be the name of the input mesh.  If omitted, the first argument that looks like a file name will be used. |
 | `-o`      | Optional parameter to specify the output file.  If used, the next parameter must be the name of the output mesh.  If omitted, the second argument that looks like a file name will be used.  If the output file is omitted altogether, then the input file name will be used as the name of the output file, but will be given a `cmsh` extension. |
 | `-s`      | Straight conversion of the msh file.  If used, the vertex components (position, normal, and UV coords) will be written to a single array.  If omitted, each component will be written to its own array. |
+| `-m`      | Do not preserve material names.  If used, the material names will not be written to the output file. |
 
 More options may be coming soon.
 
@@ -25,7 +26,8 @@ struct cmsh_header
 	int GroupCount;
 	int MaterialCount;
 	int TextureCount;
-	int VertexComponents;
+	int VertexComponents : 1;
+	int MaterialNames : 1;
 };
 ```
 #### Header
@@ -42,6 +44,9 @@ The number of textures in the `CMSH` file.
 
 #### VertexComponents
 If `1`, each of the vertex components are in their seperate arrays.  If `0`, then the components are in a single array.  In future versions of this program, this may become a bitfield or split up into multiple fields.  It is advisable that you `and` this with `1` to see what the vertex layout is.
+
+#### MaterialNames
+If `1`, the material list is an array of `cmsh_material_named` structures.  If `0`, the material list is an array of `cmsh_material` structures.
 
 ### vtx2
 ```c++
@@ -143,7 +148,7 @@ An array of `vtx3` structures containing normal data for each vertex.
 An array of `vtx2` structures containing UV coordinate data for each vertex.
 
 ### cmsh_material
-An array of `cmsh_material` structures is generated after the array of `cmsh_group` or `cmsh_group_comp` structures.
+An array of `cmsh_material` structures is generated after the array of `cmsh_group` or `cmsh_group_comp` structures if `cmsh_header::MaterialNames` is `0`.
 ```c++
 struct cmsh_material
 {
@@ -169,6 +174,27 @@ This causes the mesh to have a glow-in-the-dark effect.  The higher this value i
 
 #### Power
 See Orbiter SDK documentation for more information.
+
+### cmsh_material_named
+An array of `cmsh_material_named` structures is generated after the array of `cmsh_group` or `cmsh_group_comp` structures if `cmsh_header::MaterialNames` is `1`.
+```c++
+struct cmsh_material_named
+{
+	int NameLength;
+	char Name[NameLength];
+	float Diffuse[4];
+	float Ambient[3];
+	float Specular[3];
+	float Emissive[3];
+	float Power;
+};
+```
+
+#### NameLength
+The length of the material name including the null terminator.
+
+#### Name
+The name of the material.  Must be null-terminated.
 
 ### cmsh_texture
 An array of `cmsh_texture` structures is generated after the array of `cmsh_material` structures.
